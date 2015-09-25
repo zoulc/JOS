@@ -1,0 +1,1 @@
+JOS is an operating system skeleton developped by MIT for its course 6.828. Although now it has only a very limited set of functions, in the future I will implement some more useful functions for it. It aims to be able to work on real-world x86 machines.
