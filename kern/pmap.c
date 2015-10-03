@@ -18,7 +18,6 @@ pde_t *kern_pgdir;		// Kernel's initial page directory
 struct PageInfo *pages;		// Physical page state array
 static struct PageInfo *page_free_list;	// Free list of physical pages
 
-
 // --------------------------------------------------------------
 // Detect machine's physical memory setup.
 // --------------------------------------------------------------
@@ -342,7 +341,18 @@ pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
-	return NULL;
+	struct PageInfo *pp;
+	if (pgdir[PDX(va)] & PTE_P)
+		return (pte_t *)KADDR(PTE_ADDR(pgdir[PDX(va)])) + PTX(va);
+	else if (!create)
+		return NULL;
+	else {
+		if (!(pp = page_alloc(ALLOC_ZERO)))
+			return NULL;
+		pgdir[PDX(va)] = page2pa(pp) | PTE_U | PTE_P;
+		pp->pp_ref++;
+		return (pte_t *)page2kva(pp) + PTX(va);
+	}
 }
 
 //
@@ -360,6 +370,12 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	// Fill this function in
+	uint32_t offset;
+	pte_t *pte;
+	for (offset = 0; offset < size; offset += PGSIZE) {
+		pte = pgdir_walk(pgdir, (const void *)va + offset, 1);
+		*pte = (pa + offset) | perm | PTE_P;
+	}
 }
 
 //
@@ -391,6 +407,13 @@ int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
 	// Fill this function in
+	pte_t *pte;
+	if (!(pte = pgdir_walk(pgdir, va, 1)))
+		return -E_NO_MEM;
+	pp->pp_ref++;
+	if (*pte & PTE_P)
+		page_remove(pgdir, va);
+	*pte = page2pa(pp) | perm | PTE_P;
 	return 0;
 }
 
@@ -409,6 +432,12 @@ struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	// Fill this function in
+	pte_t *pte = pgdir_walk(pgdir, va, 0);
+	if (pte != NULL && (*pte & PTE_P)) {
+		if (pte_store)
+			*pte_store = pte;
+		return pa2page(PTE_ADDR(*pte));
+	}
 	return NULL;
 }
 
@@ -431,6 +460,13 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
+	struct PageInfo *pp;
+	pte_t *pte;
+	if ((pp = page_lookup(pgdir, va, &pte))) {
+		page_decref(pp);
+		*pte = 0;
+		tlb_invalidate(pgdir, va);
+	}
 }
 
 //
