@@ -13,6 +13,7 @@
 
 #include <kern/trap.h>
 #include <kern/pmap.h>
+#include <kern/env.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
@@ -27,9 +28,11 @@ struct Command {
 static struct Command commands[] = {
 	{ "backtrace", "Display stack backtrace", mon_backtrace },
 	{ "checkvm", "Dump memory contents within certain virtual address range", mon_checkvm },
+	{ "continue", "For debug mode only: continue execuation to next breakpoint", mon_continue },
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "showmappings", "Display physical page mappings within certain range of virtual addresses", mon_showmappings },
+	{ "si", "For debug mode only: single step to next instruction", mon_si },
 	{ "setperm", "Set permission bit in page table entry for given virtual address", mon_setperm }
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
@@ -202,6 +205,30 @@ mon_checkvm(int argc, char **argv, struct Trapframe *tf)
 		cprintf("vaddr: %x, value: %x\n",
 			start_addr, *start_addr);
         return 0;
+}
+
+int mon_continue(int argc, char **argv, struct Trapframe *tf) {
+	if (argc != 1 || tf == NULL || 
+		(tf->tf_trapno != T_DEBUG && tf->tf_trapno != T_BRKPT)) {
+		cprintf("For debug mode only!\n");
+		cprintf("Usage: continue\n");
+		return 0;
+	}
+	tf->tf_eflags &= ~FL_TF;
+	env_run(curenv);
+	panic("continue error: env_run() return\n");
+}
+
+int mon_si(int argc, char **argv, struct Trapframe *tf) {
+	if (argc != 1 || tf == NULL ||
+		(tf->tf_trapno != T_DEBUG && tf->tf_trapno != T_BRKPT)) {
+		cprintf("For debug mode only!\n");
+		cprintf("Usage: si\n");
+		return 0;
+	}
+	tf->tf_eflags |= FL_TF;
+	env_run(curenv);
+	panic("si error: env_run() return\n");
 }
 
 /***** Kernel monitor command interpreter *****/
