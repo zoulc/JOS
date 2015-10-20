@@ -6,6 +6,7 @@
 #include <kern/kdebug.h>
 #include <kern/pmap.h>
 #include <kern/env.h>
+#include <inc/error.h>
 
 extern const struct Stab __STAB_BEGIN__[];	// Beginning of stabs table
 extern const struct Stab __STAB_END__[];	// End of stabs table
@@ -143,6 +144,9 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 		// Return -1 if it is not.  Hint: Call user_mem_check.
 		// LAB 3: Your code here.
 
+		if (user_mem_check(curenv, (const void *)usd, sizeof(struct UserStabData), PTE_U) != -E_FAULT)
+			return -1;
+
 		stabs = usd->stabs;
 		stab_end = usd->stab_end;
 		stabstr = usd->stabstr;
@@ -150,6 +154,11 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 
 		// Make sure the STABS and string table memory is valid.
 		// LAB 3: Your code here.
+
+		if (user_mem_check(curenv, (const void *)stabs, (size_t)stab_end - (size_t)stabs, PTE_U) != -E_FAULT)
+			return -1;
+		if (user_mem_check(curenv, (const void *)stabstr, (size_t)stabstr_end - (size_t)stabstr, PTE_U) != -E_FAULT)
+			return -1;
 	}
 
 	// String table validity checks
@@ -198,13 +207,11 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	// Search within [lline, rline] for the line number stab.
 	// If found, set info->eip_line to the right line number.
 	// If not found, return -1.
-	//
-	// Hint:
-	//	There's a particular stabs type used for line numbers.
-	//	Look at the STABS documentation and <inc/stab.h> to find
-	//	which one.
-	// Your code here.
-
+	stab_binsearch(stabs, &lline, &rline, N_SLINE, addr);
+	if (lline <= rline)
+		info->eip_line = stabs[lline].n_desc;
+	else
+		return -1;
 
 	// Search backwards from the line number for the relevant filename
 	// stab.
