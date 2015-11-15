@@ -37,8 +37,6 @@ i386_init(void)
 	// Lab 2 memory management initialization functions
 	mem_init();
 
-	cprintf("0x12345678: %08x\n", *((uint32_t *)0x12345678));
-
 	// Lab 3 user environment initialization functions
 	env_init();
 	trap_init();
