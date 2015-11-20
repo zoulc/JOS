@@ -397,12 +397,16 @@ env_create(uint8_t *binary, enum EnvType type)
 
 	struct Env *e;
 	int r = env_alloc(&e, 0);
+	e->env_type = type;
 	if (r < 0)
 		panic("env_create: %e", r);
 	load_icode(e, binary);
 	
 	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
 	// LAB 5: Your code here.
+
+	if (type == ENV_TYPE_FS)
+		e->env_tf.tf_eflags |= FL_IOPL_3;
 }
 
 //
