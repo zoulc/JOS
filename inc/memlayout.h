@@ -130,6 +130,9 @@
 // Where user programs generally begin
 #define UTEXT		(2*PTSIZE)
 
+// Used for temporary page mappings by exec()
+#define ETEMP		0xe000000
+
 // Used for temporary page mappings.  Typed 'void*' for convenience
 #define UTEMP		((void*) PTSIZE)
 // Used for temporary page mappings for the user page-fault handler

@@ -2,6 +2,7 @@
 
 #include <inc/syscall.h>
 #include <inc/lib.h>
+#include <inc/elf.h>
 
 static inline int32_t
 syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -121,4 +122,10 @@ int
 sys_env_set_priorty(envid_t envid, int priorty)
 {
 	return syscall(SYS_env_set_priorty, 1, envid, priorty, 0, 0, 0);
+}
+
+int
+sys_exec(struct Elf *elf, uint32_t tf_esp)
+{
+	return syscall(SYS_exec, 1, (uint32_t)elf, tf_esp, 0, 0, 0);
 }
